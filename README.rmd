@@ -1,0 +1,83 @@
+---
+title: "Fonds de cartes territoriaux"
+author: "Equipe développement SGDF"
+date: "14 avril 2019"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+## Les fichiers
+
+Différents fichiers spatiaux, de type Shapefile (en .shp) ont été créés :
+
++ Au niveau des territoires :
+    + Un fichier entier, avec les DOM à leur vraie position ;
+    + Un fichier avec les DOM ajoutés en dessous de la France métropolitaine ;
+    + Un fichier avec les DOM et un encart pour l'Île-de-France.
+
++ Au niveau des centres de ressources, de façon symétrique :
+    + Un fichier entier, avec les DOM à leur vraie position ;
+    + Un fichier avec les DOM ajoutés en dessous de la France métropolitaine ;
+    + Un fichier avec les DOM et un encart pour l'Île-de-France.
+
+## Les modifications
+
+Le fichier **Codes/Gestion_shp.R** a été utilisé pour effectuer les modifications :
+
++ Mise au format des variables ;
++ Modification de la zone du sud des Yvelines ;
++ Ajout des DOM et de l'Île-de-France ;
++ Fusion au niveau des centres de ressources.
+
+Subsistent quelques problèmes/modifications à faire :
+
++ Au niveau de Paris et de la frontière de l'Occitanie, quelques problèmes de bordures apparaissent (à traiter plutôt dans l'import) ;
++ Mettre les libellés au format Majuscule/Minuscule ;
++ Ajout du territoire Monde.
+
+## Exemple d'utilisation
+
+On charge les packages, le fond de carte DOM + Île-de-France, au territoire et au centre de ressources, les coordonnées des polygones d'encart et un fichier avec le nombre d'adhérents par territoire (arrondi à la dizaine) comme exemple.
+
+```{r chargement}
+library(tidyverse)
+library(sf)
+
+shp_terr_dom_idf <- st_read("Shapefiles/Territoires/shp_terr_dom_idf.shp")
+
+shp_cr_dom_idf <- st_read("Shapefiles/Centres_ressources/shp_cr_dom_idf.shp")
+
+polygones_encart <- read_rds("Shapefiles/encarts_polygones_dom_idf.rds")
+
+adherents_terr <- read_rds("Data/data_adherents_terr.rds")
+```
+
+On fusionne ensuite les données d'adhérents et le fond de carte (attention, dans un SHP, le nom des variables est condensé).
+
+```{r fusion}
+adherents_terr_shp <- shp_terr_dom_idf %>%
+  left_join(adherents_terr, by = c("cd_trr_c" = "code_terr_court", "code_cr"))
+```
+
+On fait ensuite la carte, en incluant les polygones.
+
+```{r carte, fig.height=8, fig.width=14}
+ggplot() +
+  geom_sf(data = adherents_terr_shp, aes(fill = nb_adherents_arrondi)) +
+  geom_sf(data = shp_cr_dom_idf, alpha = 0, color = "grey20", lwd = 0.6) +
+  geom_polygon(data = polygones_encart, aes(x = x_dom, y = y_dom), alpha = 0, color = "black") +
+  geom_polygon(data = polygones_encart, aes(x = x_idf, y = y_idf), alpha = 0, color = "black") +
+  scale_fill_gradient(name = "Adhérents", low = "white", high = "red", na.value = "white") +
+  theme_void() +
+  theme(panel.grid = element_line(NULL)) +
+  ggtitle(label = "Carte des adhérents par territoire")
+```
+
+
