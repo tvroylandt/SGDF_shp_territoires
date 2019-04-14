@@ -2,7 +2,7 @@
 title: "Fonds de cartes territoriaux"
 author: "Equipe développement SGDF"
 date: "14 avril 2019"
-output: html_document
+output: rmarkdown::github_document
 ---
 
 ```{r setup, include=FALSE}
